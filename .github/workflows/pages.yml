@@ -1,0 +1,57 @@
+name: Sync and deploy TOOTH to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: tooth-github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check the current public frontend
+        id: sync
+        if: github.event_name != 'push'
+        run: npm run sync
+      - name: Record updated public frontend
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html THIRD_PARTY_NOTICES.txt
+          git commit -m "Sync published TOOTH frontend"
+          git push origin HEAD:main
+      - name: Build the site
+        if: github.event_name != 'schedule' || steps.sync.outputs.changed == 'true'
+        run: npm run build
+      - name: Configure Pages
+        if: github.event_name != 'schedule' || steps.sync.outputs.changed == 'true'
+        uses: actions/configure-pages@v5
+      - name: Upload site files
+        if: github.event_name != 'schedule' || steps.sync.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - name: Deploy GitHub Pages
+        id: deployment
+        if: github.event_name != 'schedule' || steps.sync.outputs.changed == 'true'
+        uses: actions/deploy-pages@v4
