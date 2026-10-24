@@ -474,4 +474,3 @@ const careLogout=logout;logout=async function(){closeQuickWheel();clearTimeout(p
 loadUsers();(async()=>{try{const remembered=localStorage.getItem(SESSION),u=users[remembered];if(remembered&&u?.pet&&u.token){userToken=u.token;const data=await apiRequest('/api/state');await openPlayer({...data,token:u.token},u.passwordHash,remembered)}}catch(e){userToken='';$('authError').textContent=e.status===401?'请重新登录以继续游戏。':'云端连接未完成，请联网后登录。'}})();
 })();
 </script></body></html>
-
